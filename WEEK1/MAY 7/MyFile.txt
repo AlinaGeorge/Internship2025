@@ -1,0 +1,3 @@
+The name of file is Myfile.
+This is an empty folder.
+The file has two lines.
