@@ -1,0 +1,10 @@
+OrderID,Date,Customer,Product,Category,Quantity,UnitPrice,TotalPrice,Region
+1001,2025-01-01,Alice,Phone,Electronics,2,300,600,North
+1002,2025-01-03,Bob,Laptop,Electronics,1,1200,1200,West
+1003,2025-01-05,Charlie,Desk,Furniture,1,200,200,South
+1004,2025-01-07,Dave,Chair,Furniture,4,50,200,North
+1006,2025-01-11,Frank,Tablet,Electronics,2,400,800,West
+1007,2025-01-13,Grace,Sofa,Furniture,1,500,500,South
+1008,2025-01-15,Alice,Laptop,Electronics,1,1200,1200,North
+
+
