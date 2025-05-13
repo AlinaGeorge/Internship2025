@@ -1,0 +1,8 @@
+﻿Prompt Engineering
+
+
+Prompt engineering is the process of designing and refining inputs (called prompts) to guide the responses of large language models (LLMs) like ChatGPT. Since these models do not think or reason like humans, the way a prompt is written greatly affects the quality, accuracy, and usefulness of the output. Prompt engineering is a key skill in making AI tools perform well in real-world tasks.
+Prompts are instructions given to an AI model to get a desired response. A good prompt can help the model summarize a document, write code, answer questions, translate languages, or even simulate a conversation. The process of prompt engineering involves choosing the right wording, structure, and context to make the model understand what the user wants.
+There are different types of prompting techniques, such as zero-shot prompting, few-shot prompting, and chain-of-thought prompting. Zero-shot means asking the model without any examples. Few-shot provides some examples to guide the model. Chain-of-thought prompts help the model reason step-by-step before answering. Each method is used based on the complexity of the task.
+Prompt engineering is applied in areas like content creation, customer support, education, programming, semantic search, translation, business writing, and even healthcare or legal support to guide AI in generating accurate, useful, and context-aware responses.
+In summary, prompt engineering is both an art and a science. It requires creativity, experimentation, and a clear understanding of how AI models work.Mastering prompt engineering allows users to unlock the full potential of AI models and ensures they perform reliably across various applications.
