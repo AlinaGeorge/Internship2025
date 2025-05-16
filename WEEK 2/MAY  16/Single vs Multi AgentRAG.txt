@@ -1,0 +1,59 @@
+﻿Single-agent vs. Multi-agent RAG
+
+
+SINGLE-AGENT RAG
+
+A single-agent RAG model uses one retriever and one generator to handle the entire query lifecycle. It's effective but has limitations in scale, flexibility, and domain expertise.
+* Retriever: Typically a dense vector-based retriever (e.g., FAISS, Elasticsearch) fetches top-k documents.
+* Generator: An LLM (e.g., GPT, T5, BART) generates the final answer using both the query and retrieved documents.
+Works best when:
+	* The knowledge base is homogenous.	
+	* The domain is narrow (e.g., tech support).
+	* Real-time performance is critical.
+Characteristics:
+	* Simpler architecture
+	* Easier to build and maintain
+	* Lower resource usage
+	* May be limited in flexibility, specialization, and robustness
+Workflow:
+1. User Query 
+2. Single Retriever (fetches documents from a knowledge base) 
+3. Single Generator (creates the answer based on retrieved docs) 
+4. Final Output
+Limitations
+	* Can't adapt well to multiple domains or data types.
+	* Limited error checking—if the retriever fails, generation likely fails.
+	* Can hallucinate without sufficient external critique.
+Applications:
+	Customer chatbot retrieving from a single FAQ database.
+
+
+MULTI-AGENT RAG
+
+Multi-Agent RAG introduces multiple autonomous agents, each with unique capabilities. These agents collaborate, compete, or critique to achieve more accurate, flexible, and scalable responses.
+	1.Query Processor Agent :Can break complex queries into parts
+	2.Domain-Specific Retriever Agents Each agent may use a tailored embedding model and search strategy
+	3.Generator Agents Translate, rephrase, or summarize and focuses on different reasoning methods using different LLMs tuned for particular tasks
+	4.Critic/Evaluator  :Fact-check or critique generated content using reasoning chains or voting mechanisms
+	5.Synthesizer/Orchestrator :Picks best outputs, merges results, or composes a unified response.
+Characteristics:
+	* Modular and extensible
+	* Parallelism improves performance and depth
+	* Allows domain-specific or task-specific agents
+	* More complex to manage and orchestrate
+Workflow:
+1. User Query 
+2. Query Decomposer (if needed) 
+3. Multiple Retrievers (query different data sources in parallel) 
+4. Aggregator (merges and ranks results) 
+5. Multiple Generators (produce diverse outputs) 
+6. Evaluator/Critic Agent (selects or refines best response) 
+7. Synthesizer (final output)
+Limitations:
+	* Requires orchestration layer (LangChain, AutoGen, CrewAI).
+	* Latency and cost are higher.
+	* Requires careful design to avoid conflict or duplication among agents.
+Applications:
+	* Multi-domain question answering (legal + medical + scientific)
+	* Safety-critical applications (via redundancy + critique)
+	* Dynamic knowledge sourcing (real-time + offline).
