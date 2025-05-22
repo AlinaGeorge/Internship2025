@@ -47,7 +47,7 @@ async def main():
     # Create the model client
     model_client = OpenAIChatCompletionClient(
         model="gemini-1.5-flash-8b",
-        api_key="AIzaSyCojNDEiD2Lhphj_9vRKbSRItedf-PUQ7o",
+        api_key=API_KEY,
     )
 
     def retrieve_faq_answer(question: str) -> str:
