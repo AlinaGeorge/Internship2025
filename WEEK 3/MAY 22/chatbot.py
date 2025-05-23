@@ -17,12 +17,10 @@ import re
 
 # Load environment variables
 load_dotenv()
-API_KEY = os.getenv("API_KEY")
-
 
 chroma_client = chromadb.PersistentClient(path="./faq_db")
 embedding_function = GoogleGenerativeAiEmbeddingFunction(
-    api_key=API_KEY, model_name="models/embedding-001"
+    api_key=os.getenv("API_KEY"), model_name="models/embedding-001"
 )
 
 faq_collection = chroma_client.get_or_create_collection(
@@ -47,7 +45,7 @@ async def main():
     # Create the model client
     model_client = OpenAIChatCompletionClient(
         model="gemini-1.5-flash-8b",
-        api_key=API_KEY,
+        api_key=os.getenv("API_KEY"),
     )
 
     def retrieve_faq_answer(question: str) -> str:
