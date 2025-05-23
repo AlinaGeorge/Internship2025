@@ -1,146 +1,89 @@
-'''import asyncio
+import asyncio
 import os
 import subprocess
 import tempfile
-from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_agentchat.agents import AssistantAgent
-from autogen_agentchat.teams import RoundRobinGroupChat
 from autogen_agentchat.conditions import TextMentionTermination
+from autogen_agentchat.teams import RoundRobinGroupChat
 from autogen_agentchat.ui import Console
-#from autogen_agentchat.tools import Tool
-from autogen import Tool
+from autogen_ext.models.openai import OpenAIChatCompletionClient
 
 
-from dotenv import load_dotenv
-
-load_dotenv()
-
-# --- Tool: Linter using pylint ---
-def lint_code(code: str) -> str:
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".py", mode='w') as f:
-        f.write(code)
-        temp_file_path = f.name
-
-    result = subprocess.run(
-        ["pylint", temp_file_path, "--disable=all", "--enable=E,F,W,C"],
-        capture_output=True,
-        text=True
-    )
-    os.unlink(temp_file_path)
-    return result.stdout
-
-# --- Tool: Python Executor ---
-def run_python_code(code: str) -> str:
+# Tool 1: Python Executor
+async def execute_python(code: str) -> str:
     try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".py", mode='w') as f:
+        with tempfile.NamedTemporaryFile(mode="w+", suffix=".py", delete=False) as f:
             f.write(code)
-            temp_file_path = f.name
-        result = subprocess.run(["python", temp_file_path], capture_output=True, text=True, timeout=10)
-        os.unlink(temp_file_path)
-        if result.returncode != 0:
-            return f"❌ Error:\n{result.stderr}"
-        return f"✅ Output:\n{result.stdout}"
-    except subprocess.TimeoutExpired:
-        return "⏰ Execution timed out"
-
-# --- Setup Gemini Wrapper ---
-model_client = OpenAIChatCompletionClient(
-    model="gemini-1.5-flash-8b",  # Or your deployed model name
-    api_key=os.getenv("API_KEY")
-)
-
-# --- Define Agents ---
-coder = AssistantAgent(
-    name="Coder",
-    description="Writes Python code from a user request.",
-    model_client=model_client,
-    system_message="You are a helpful agent that writes Python code based on user input."
-)
-lint_tool = Tool(name="LintCode", func=lint_code, description="Lints Python code using pylint.")
-exec_tool = Tool(name="RunCode", func=run_python_code, description="Runs Python code and returns output.")
-
-debugger = AssistantAgent(
-    name="Debugger",
-    description="Runs linting and execution to debug the code.",
-    model_client=model_client,
-    system_message=(
-        "You are a debugging assistant. You run `pylint` on the code and execute it. "
-        "Then give suggestions for improvements if any errors or warnings occur."
-    ),
-    tools=[lint_tool, exec_tool]  # ✅ This is now a valid list of Tool objects
-)
+            f.flush()
+            result = subprocess.run(
+                ["python", f.name],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+        return f"Output:\n{result.stdout}\nErrors:\n{result.stderr}"
+    except Exception as e:
+        return f"Execution Error: {str(e)}"
 
 
+# Tool 2: Linter using pylint
+async def lint_python(code: str) -> str:
+    try:
+        with tempfile.NamedTemporaryFile(mode="w+", suffix=".py", delete=False) as f:
+            f.write(code)
+            f.flush()
+            result = subprocess.run(
+                ["pylint", f.name, "--disable=all", "--enable=errors,warnings"],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+        return result.stdout
+    except Exception as e:
+        return f"Linter Error: {str(e)}"
 
 
-# --- Main Async Execution ---
 async def main():
-    group_chat = RoundRobinGroupChat(
-        agents=[coder, debugger],
-        max_rounds=5,
-        messages=[],
-        termination=TextMentionTermination("TERMINATE")
-    )
-
-    task = """Write a Python program that accepts a list of numbers and returns their median.
-Make sure to handle both even and odd cases. Then run it with the input [3, 5, 1, 9, 7]."""
-    
-    await Console(group_chat.run_stream(task=task))
-
-if __name__ == "__main__":
-    asyncio.run(main())'''
-
-
-#creating two agents coder and debugger
-#coder will generate code and debugger will debug the code
-#debugger will use pylint to debug the code
-#coder will use gemini to generate code
-#debugger will use gemini to debug the code
-import asyncio
-from autogen_agentchat.agents import AssistantAgent
-from autogen_agentchat.conditions import TextMentionTermination
-from autogen_agentchat.teams import RoundRobinGroupChat
-from autogen_agentchat.ui import Console
-from autogen_ext.models.openai import OpenAIChatCompletionClient
-import os
-from dotenv import load_dotenv
-from concurrent.futures import ThreadPoolExecutor
-from pylint.lint import Run
-
-
-load_dotenv()
-# Load environment variables from .env file
-async def main():
-    model_client = OpenAIChatCompletionClient (
+    # Create Gemini model client
+    model_client = OpenAIChatCompletionClient(
         model="gemini-1.5-flash-8b",
-        api_key=os.getenv("API_KEY") # Load from .env
-)
-
-#define the coder agent
-    coder = AssistantAgent(
-        name="Coder",
-        model_client=model_client,
-        description="Code generation agent",
-        system_message="You are a helpful coding assistant.",
+        api_key=os.getenv("API_KEY"),
     )
 
-    # Define the debugger agent
-    debugger = AssistantAgent(
-        name="Debugger",
+    # Coder Agent: Generates initial Python code
+    coder_agent = AssistantAgent(
+        name="coder_agent",
         model_client=model_client,
-        description="You are a helpful debugging assistant.",
-        system_message="You are a helpful debugging assistant when done debugging type Terminate.",
-        
+        description="An agent that writes Python code based on the task description.",
+        system_message="You write clean, functional Python code. Use the Python Executor to test your code. Pass it to the Debugger for linting and error fixing.",
+        tools=[execute_python],
     )
-    termination_condition=TextMentionTermination("Terminate")
-    # Create a group chat with round-robin communication
-    group_chat = RoundRobinGroupChat([coder, debugger],termination_condition=termination_condition)
 
-    # Create a console UI for the group chat
-    t=input("Enter the program to generate code for: ")
-    await Console(group_chat.run_stream(task=t))
+    # Debugger Agent: Identifies and fixes issues using linting and execution
+    debugger_agent = AssistantAgent(
+        name="debugger_agent",
+        model_client=model_client,
+        description="An agent that identifies and fixes errors in Python code.",
+        system_message="You use linting and error output to fix Python code. Use the Linter and Python Executor tools to test and debug. Once the code is clean and functional, say TERMINATE.",
+        tools=[lint_python, execute_python],
+    )
 
+    # Define termination condition
+    termination = TextMentionTermination("TERMINATE")
+
+    # Create group chat with Coder and Debugger
+    group_chat = RoundRobinGroupChat(
+        [coder_agent, debugger_agent],
+        termination_condition=termination,
+    )
+
+    # Run the collaborative debugging session
+    await Console(group_chat.run_stream(task="Write a Python function to check if a number is prime."))
+
+    # Close the model client
     await model_client.close()
-# Run the main function
+
+
+# Run the async program
 if __name__ == "__main__":
     asyncio.run(main())
