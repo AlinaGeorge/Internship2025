@@ -12,12 +12,15 @@ import re
 import time
 import random
 
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 async def main():
     # Create the model client
     model_client = OpenAIChatCompletionClient(
         model="gemini-1.5-flash-8b",
-        api_key="AIzaSyCojNDEiD2Lhphj_9vRKbSRItedf-PUQ7o",
+        api_key=os.getenv("API_KEY"),
     )
 
     # Define the search tool for the Researcher
