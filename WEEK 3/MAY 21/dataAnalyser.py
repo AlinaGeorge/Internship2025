@@ -1,141 +1,74 @@
-'''import asyncio
-
-import pandas as pd
-import matplotlib.pyplot as plt
-from io import StringIO
-
-from autogen_agentchat.agents import AssistantAgent
-from autogen_agentchat.conditions import TextMentionTermination
-from autogen_agentchat.teams import RoundRobinGroupChat
-from autogen_agentchat.ui import Console
-from autogen_ext.models.openai import OpenAIChatCompletionClient
-
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
-
-def load_csv_from_file(filepath: str) -> pd.DataFrame:
-    return pd.read_csv(filepath)
-
-
-def plot_column_histogram(df: pd.DataFrame, column: str):
-
-    df[column].hist()
-    plt.title(f"Histogram of {column}")
-    plt.xlabel(column)
-    plt.ylabel("Frequency")
-    plt.savefig("histogram.png")
-    plt.close()
-    return "Histogram saved as 'histogram.png'"
-
-async def main():
-    model_client = OpenAIChatCompletionClient(
-        model= "gemini-1.5-flash",
-        api_key=os.getenv("API_KEY")
-    )
-
-
-# Define assistant agents with asyncio
-    data_fetcher = AssistantAgent(
-        name="data_fetcher",
-        model_client=model_client,
-        description="A helpful assistant that can fetch data.",
-        system_message="You are a helpful assistant that can retrieve data from CSV file.",
-        tools=[load_csv_from_file]
-        
-        )
-
-    analyst= AssistantAgent(
-        name="analyst",
-        model_client=model_client,
-        description="A analyst that analysis data fetched from CSV file and generates visualizations.",
-        system_message="You are a helpful assistant that can analyze data and generate visualizations.",
-        tools=[plot_column_histogram]
-        )
-
-    task_prompt = """
-            You are part of a Data Analysis Pipeline.
-
-            1. `data_fetcher`: Use `load_csv_from_file("data.csv")` to read the CSV file.
-            2. Pass the DataFrame to `analyst`.
-            3. `analyst`: Analyze the DataFrame and create a histogram of the 'Score' column using `plot_column_histogram(df, "Score")`.
-            End the session by saying 'TERMINATE'.
-            """
-
-    termination = TextMentionTermination("TERMINATE")
-    group_chat = RoundRobinGroupChat(
-            [data_fetcher,analyst], termination_condition=termination
-        )
-    await Console(group_chat.run_stream(task=task_prompt))
-
-    await model_client.close()
-
-
-# Run the async function
-if __name__ == "__main__":
-    asyncio.run(main())'''
-
 import asyncio
 import pandas as pd
 import os
 import matplotlib.pyplot as plt
+from dotenv import load_dotenv
+
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_agentchat.agents import AssistantAgent
 from autogen_agentchat.conditions import TextMentionTermination
 from autogen_agentchat.teams import RoundRobinGroupChat
 from autogen_agentchat.ui import Console
-from dotenv import load_dotenv
 
 load_dotenv()
 
-async def fetch_csv(file_path:str)->pd.DataFrame:
+# Tool 1: Fetch CSV and return file path
+async def fetch_csv(file_path: str) -> str:
     await asyncio.sleep(1)
-    return pd.read_csv(file_path)
+    # Validate the file exists
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"{file_path} does not exist.")
+    return file_path
 
-async def analyze_data(data:pd.DataFrame,output_file:str):
+# Tool 2: Load CSV and analyze data from file path
+async def analyze_data(file_path: str, output_file: str) -> str:
     await asyncio.sleep(1)
-    required_columns=["Name","Age"]
-    
-    plt.figure(figsize=(10,6))
-    data.plot(kind="bar",x="Name",y="Age")
+    data = pd.read_csv(file_path)
+    if "Name" not in data.columns or "Age" not in data.columns:
+        return "Required columns not found in the data."
+
+    plt.figure(figsize=(10, 6))
+    data.plot(kind="bar", x="Name", y="Age")
     plt.title("Data Visualization")
     plt.savefig(output_file)
     plt.close()
+    return f"Visualization saved to {output_file}"
 
 async def main():
-    model_client=OpenAIChatCompletionClient(
+    model_client = OpenAIChatCompletionClient(
         model="gemini-1.5-flash-8b",
         api_key=os.getenv("API_KEY")
     )
 
-    data_fetcher=AssistantAgent(
+    data_fetcher = AssistantAgent(
         name="DataFetcher",
-        description="Fetches CSV data and return as Dataframes",
+        description="Fetches CSV file paths.",
         model_client=model_client,
-        system_message="You are data fetching agent,Your task to fetch the data from csv and return as Dataframe"
+        system_message="You are a data fetcher. Use the fetch_csv tool to return the path of a CSV file.",
+        tools=[fetch_csv],
     )
 
-    analyst=AssistantAgent(
+    analyzer = AssistantAgent(
         name="Analyzer",
-        description="Analyze the data and create visualization",
+        description="Analyzes and visualizes data from CSV file path.",
         model_client=model_client,
-        system_message="You are analyst agent,Your task to analyze the data and create visualization"
+        system_message="You are an analyst. Use the analyze_data tool with a file path to create a plot and save it. When done, say TERMINATE.",
+        tools=[analyze_data],
     )
 
-    termination=TextMentionTermination("TERMINATE")
-    group_chat=RoundRobinGroupChat(
-        [data_fetcher,analyst],
-        max_turns=3
+    termination = TextMentionTermination("TERMINATE")
+
+    group_chat = RoundRobinGroupChat(
+        [data_fetcher, analyzer],
+        termination_condition=termination,
+        max_turns=5
     )
 
-    filepath="data.csv"
-    output_file="visualization.png"
-    data=await fetch_csv(filepath)
-    print("Data fetched")
+    await Console(group_chat.run_stream(
+        task="Use the file 'data.csv' and generate a bar chart of Name vs Age. Save the visualization as 'graph.png'."
+    ))
 
-    await analyze_data(data,output_file)
-    await Console(group_chat.run_stream(task=f"Analyze the data and visualize results for {filepath}"))
+    await model_client.close()
 
 if __name__ == "__main__":
     asyncio.run(main())
